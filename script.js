@@ -32,7 +32,7 @@ const airplaneImg = new Image();
 airplaneImg.src = 'fly.png';
 
 const upgradedAirplaneImg = new Image();
-upgradedAirplaneImg.src = 'joke.png';
+upgradedAirplaneImg.src = 'joke.png'; // Upgraded airplane image
 
 const enemyImg = new Image();
 enemyImg.src = 'PhQs airlines_processed.png';
@@ -54,11 +54,6 @@ window.addEventListener('click', () => {
   backgroundMusic.play().catch((error) => console.error('Audio play error:', error));
 });
 
-// Prevent default touch behavior to allow touch movement
-document.addEventListener('touchmove', (event) => {
-  event.preventDefault();
-}, { passive: false });
-
 // Event listeners for mouse/touch input
 function isInsideAirplane(x, y) {
   return (
@@ -70,12 +65,11 @@ function isInsideAirplane(x, y) {
 }
 
 function handleStart(event) {
-  event.preventDefault();
   if (!gameStarted) return;
+  event.preventDefault();
   const rect = canvas.getBoundingClientRect();
-  const touch = event.touches ? event.touches[0] : event;
-  const x = touch.clientX - rect.left;
-  const y = touch.clientY - rect.top;
+  const x = (event.touches ? event.touches[0].clientX : event.clientX) - rect.left;
+  const y = (event.touches ? event.touches[0].clientY : event.clientY) - rect.top;
 
   if (isInsideAirplane(x, y)) {
     airplane.isDragging = true;
@@ -83,11 +77,10 @@ function handleStart(event) {
 }
 
 function handleMove(event) {
-  event.preventDefault();
   if (!gameStarted || !airplane.isDragging) return;
+  event.preventDefault();
   const rect = canvas.getBoundingClientRect();
-  const touch = event.touches ? event.touches[0] : event;
-  const x = touch.clientX - rect.left;
+  const x = (event.touches ? event.touches[0].clientX : event.clientX) - rect.left;
 
   airplane.x = x - airplane.width / 2;
   if (airplane.x < 0) airplane.x = 0;
@@ -106,24 +99,45 @@ canvas.addEventListener('mousemove', handleMove);
 canvas.addEventListener('mouseup', handleEnd);
 canvas.addEventListener('touchstart', handleStart, { passive: false });
 canvas.addEventListener('touchmove', handleMove, { passive: false });
-canvas.addEventListener('touchend', handleEnd);
+canvas.addEventListener('touchend', handleEnd, { passive: false });
 
-// Draw functions
-function drawBackground() {
-  ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
+// Ensure buttons respond to touch
+canvas.addEventListener('click', handleMenuClick);
+canvas.addEventListener('touchstart', (e) => handleMenuClick(e.touches[0]), { passive: false });
+
+function handleMenuClick(event) {
+  const x = event.clientX;
+  const y = event.clientY;
+
+  if (inUpgradeMenu) {
+    const birdX = canvas.width / 2 - 50;
+    const birdY = canvas.height / 3;
+
+    if (x >= canvas.width / 2 - 100 && x <= canvas.width / 2 + 100 &&
+        y >= canvas.height / 2 - 25 && y <= canvas.height / 2 + 25) {
+      inUpgradeMenu = false;
+      drawMenu();
+    }
+
+    if (x >= birdX - 20 && x <= birdX + 120 && y >= birdY && y <= birdY + 120 && coinBank >= 500 && !upgraded) {
+      coinBank -= 500;
+      upgraded = true;
+      drawMenu();
+    }
+  } else {
+    if (x >= canvas.width / 2 - 100 && x <= canvas.width / 2 + 100 &&
+        y >= canvas.height / 3 - 25 && y <= canvas.height / 3 + 25) {
+      gameStarted = true;
+      drawGame();
+    }
+
+    if (x >= canvas.width / 2 - 150 && x <= canvas.width / 2 + 150 &&
+        y >= canvas.height / 2 - 25 && y <= canvas.height / 2 + 25) {
+      inUpgradeMenu = true;
+      drawUpgradeMenu();
+    }
+  }
 }
 
-function drawAirplane() {
-  const img = upgraded ? upgradedAirplaneImg : airplaneImg;
-  ctx.drawImage(img, airplane.x, airplane.y, airplane.width, airplane.height);
-}
-
-// Game loop
-function drawGame() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawBackground();
-  drawAirplane();
-  requestAnimationFrame(drawGame);
-}
-
-drawGame();
+// Start the game when the page loads
+drawMenu();
