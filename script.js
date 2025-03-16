@@ -1,6 +1,6 @@
 // Game canvas and context
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
 
 // Set canvas dimensions to fill the screen
 canvas.width = window.innerWidth;
@@ -27,34 +27,37 @@ let coinBank = 0;
 let level = 1;
 let upgraded = false;
 
-// Images and sounds
+// Images
 const airplaneImg = new Image();
-airplaneImg.src = 'fly.png';
+airplaneImg.src = "fly.png";
 
 const upgradedAirplaneImg = new Image();
-upgradedAirplaneImg.src = 'joke.png'; // Upgraded airplane image
+upgradedAirplaneImg.src = "joke.png";
 
 const enemyImg = new Image();
-enemyImg.src = 'PhQs airlines_processed.png';
+enemyImg.src = "PhQs airlines_processed.png";
 
 const enemyImg2 = new Image();
-enemyImg2.src = 'Untitled design (18)_processed.png';
+enemyImg2.src = "Untitled design (18)_processed.png";
 
 const coinImg = new Image();
-coinImg.src = '$Bird$_processed.png';
+coinImg.src = "$Bird$_processed.png";
 
 const backgroundImg = new Image();
-backgroundImg.src = 'sky.avif';
+backgroundImg.src = "sky.avif";
 
-const backgroundMusic = new Audio('./backgroundmusic2.mp3');
+// Background music setup
+const backgroundMusic = new Audio("./backgroundmusic2.mp3");
 backgroundMusic.loop = true;
 
 // Start background music after user interaction
-window.addEventListener('click', () => {
-  backgroundMusic.play().catch((error) => console.error('Audio play error:', error));
+window.addEventListener("click", () => {
+  backgroundMusic.play().catch((error) =>
+    console.error("Audio play error:", error)
+  );
 });
 
-// Event listeners for mouse/touch input
+// Helper function to check if a point is inside the airplane
 function isInsideAirplane(x, y) {
   return (
     x >= airplane.x &&
@@ -64,11 +67,19 @@ function isInsideAirplane(x, y) {
   );
 }
 
+// Mouse and touch event handlers
 function handleStart(event) {
+  event.preventDefault();
   if (!gameStarted) return;
-  const rect = canvas.getBoundingClientRect();
-  const x = (event.touches ? event.touches[0].clientX : event.clientX) - rect.left;
-  const y = (event.touches ? event.touches[0].clientY : event.clientY) - rect.top;
+
+  let x, y;
+  if (event.touches) {
+    x = event.touches[0].clientX;
+    y = event.touches[0].clientY;
+  } else {
+    x = event.clientX;
+    y = event.clientY;
+  }
 
   if (isInsideAirplane(x, y)) {
     airplane.isDragging = true;
@@ -77,26 +88,30 @@ function handleStart(event) {
 
 function handleMove(event) {
   if (!gameStarted || !airplane.isDragging) return;
-  const rect = canvas.getBoundingClientRect();
-  const x = (event.touches ? event.touches[0].clientX : event.clientX) - rect.left;
+  event.preventDefault(); // Prevents scrolling on touch devices
+
+  let x;
+  if (event.touches) {
+    x = event.touches[0].clientX;
+  } else {
+    x = event.clientX;
+  }
 
   airplane.x = x - airplane.width / 2;
-  if (airplane.x < 0) airplane.x = 0;
-  if (airplane.x + airplane.width > canvas.width) {
-    airplane.x = canvas.width - airplane.width;
-  }
+  airplane.x = Math.max(0, Math.min(canvas.width - airplane.width, airplane.x));
 }
 
 function handleEnd() {
   airplane.isDragging = false;
 }
 
-canvas.addEventListener('mousedown', handleStart);
-canvas.addEventListener('mousemove', handleMove);
-canvas.addEventListener('mouseup', handleEnd);
-canvas.addEventListener('touchstart', handleStart);
-canvas.addEventListener('touchmove', handleMove);
-canvas.addEventListener('touchend', handleEnd);
+// Attach event listeners with `passive: false` to allow `preventDefault()` on Safari
+canvas.addEventListener("mousedown", handleStart);
+canvas.addEventListener("mousemove", handleMove);
+canvas.addEventListener("mouseup", handleEnd);
+canvas.addEventListener("touchstart", handleStart, { passive: false });
+canvas.addEventListener("touchmove", handleMove, { passive: false });
+canvas.addEventListener("touchend", handleEnd);
 
 // Draw functions
 function drawBackground() {
@@ -118,7 +133,7 @@ function drawCoins() {
       airplane.y + airplane.height > coin.y
     ) {
       coinsCollected += coin.value;
-      coinBank += coin.value=100;
+      coinBank += coin.value;
       coins.splice(index, 1);
     }
 
@@ -137,18 +152,16 @@ function drawCoins() {
   }
 }
 
-// Logic for both attackers
 function drawObstacles() {
   obstacles.forEach((obstacle, index) => {
-    if (obstacle.type === 'enemy1') {
-      obstacle.y += obstacle.speed; // makes enemy go straight down
-    } else if (obstacle.type === 'enemy2') {
+    if (obstacle.type === "enemy1") {
+      obstacle.y += obstacle.speed;
+    } else if (obstacle.type === "enemy2") {
       obstacle.x += Math.sin(obstacle.swirlDirection) * 3;
       obstacle.y += obstacle.speed;
       obstacle.swirlDirection += 0.07;
     }
 
-    // Collision detection with airplane
     if (
       airplane.x < obstacle.x + obstacle.width &&
       airplane.x + airplane.width > obstacle.x &&
@@ -156,42 +169,39 @@ function drawObstacles() {
       airplane.y + airplane.height > obstacle.y
     ) {
       airplane.lives--;
-      obstacles.splice(index, 1); // Remove obstacle upon collision
+      obstacles.splice(index, 1);
       if (airplane.lives <= 0) {
         gameOver = true;
       }
     }
 
-    // Remove obstacles if they go off the screen
     if (obstacle.y > canvas.height) obstacles.splice(index, 1);
 
-    // Draw the enemy based on its type
-    if (obstacle.type === 'enemy1') {
-      ctx.drawImage(enemyImg, obstacle.x, obstacle.y, obstacle.width, obstacle.height); // Enemy 1 image
-    } else if (obstacle.type === 'enemy2') {
-      ctx.drawImage(enemyImg2, obstacle.x, obstacle.y, obstacle.width, obstacle.height); // Enemy 2 image (rocket ship)
+    if (obstacle.type === "enemy1") {
+      ctx.drawImage(enemyImg, obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+    } else if (obstacle.type === "enemy2") {
+      ctx.drawImage(enemyImg2, obstacle.x, obstacle.y, obstacle.width, obstacle.height);
     }
   });
 
-  // Randomly spawn obstacles (enemies)
   if (Math.random() < 0.02) {
-    const enemyType = Math.random() < 0.8 ? 'enemy1' : 'enemy2'; // 80% chance for enemy 1, 20% for enemy 2
+    const enemyType = Math.random() < 0.8 ? "enemy1" : "enemy2";
     const newEnemy = {
-      x: Math.random() * (canvas.width - 150), // Random x position
-      y: -150, // Start above the screen
-      width: 150, // Width of the enemy
-      height: 150, // Height of the enemy
-      speed: 2 + Math.random() * 3, // Random speed for each enemy
-      type: enemyType, // Randomly assign the type of enemy
-      swirlDirection: 0, // Only needed for enemy 2 (swirling)
+      x: Math.random() * (canvas.width - 150),
+      y: -150,
+      width: 150,
+      height: 150,
+      speed: 2 + Math.random() * 3,
+      type: enemyType,
+      swirlDirection: 0,
     };
     obstacles.push(newEnemy);
   }
 }
 
 function drawScoreAndLevel() {
-  ctx.font = '20px Arial';
-  ctx.fillStyle = 'white';
+  ctx.font = "20px Arial";
+  ctx.fillStyle = "white";
   ctx.fillText(`Score: ${score}`, 20, 40);
   ctx.fillText(`Coins: ${coinsCollected}`, 20, 70);
   ctx.fillText(`Bank: ${coinBank}`, 20, 100);
@@ -199,11 +209,11 @@ function drawScoreAndLevel() {
 }
 
 function drawGameOver() {
-  ctx.font = '50px Arial';
-  ctx.fillStyle = 'red';
-  ctx.fillText('Game Over!', canvas.width / 2 - 150, canvas.height / 2);
-  ctx.font = '30px Arial';
-  ctx.fillText('Returning to Main Menu...', canvas.width / 2 - 150, canvas.height / 2 + 50);
+  ctx.font = "50px Arial";
+  ctx.fillStyle = "red";
+  ctx.fillText("Game Over!", canvas.width / 2 - 150, canvas.height / 2);
+  ctx.font = "30px Arial";
+  ctx.fillText("Returning to Main Menu...", canvas.width / 2 - 150, canvas.height / 2 + 50);
 
   setTimeout(() => {
     gameOver = false;
@@ -212,127 +222,17 @@ function drawGameOver() {
   }, 2000);
 }
 
-// Draw Menu
-function drawMenu() {
-  ctx.fillStyle = 'black';
-  ctx.fillRect(canvas.width / 4, canvas.height / 4, canvas.width / 2, canvas.height / 2);
-
-  // Start Button
-  ctx.fillStyle = 'blue';
-  ctx.fillRect(canvas.width / 2 - 100, canvas.height / 3 - 25, 200, 50);
-  ctx.fillStyle = 'white';
-  ctx.font = '30px Arial';
-  ctx.fillText('Start Game', canvas.width / 2 - 80, canvas.height / 3 + 10);
-
-  // Upgrade Button
-  ctx.fillStyle = 'blue';
-  ctx.fillRect(canvas.width / 2 - 150, canvas.height / 2 - 25, 300, 50);
-  ctx.fillStyle = 'white';
-  ctx.font = '20px Arial';
-  ctx.fillText('Upgrade Bird', canvas.width / 2 - 80, canvas.height / 2 + 10);
-}
-
-// Draw Upgrade Menu
-function drawUpgradeMenu() {
-  ctx.fillStyle = 'darkgray';
-  ctx.fillRect(canvas.width / 4, canvas.height / 4, canvas.width / 2, canvas.height / 2);
-
-  ctx.fillStyle = 'white';
-  ctx.font = '20px Arial';
-  ctx.fillText('Upgrades', canvas.width / 2 - 50, canvas.height / 3 - 50);
-
-  const birdX = canvas.width / 2 - 50;
-  const birdY = canvas.height / 3;
-  ctx.drawImage(upgradedAirplaneImg, birdX, birdY, 100, 100);
-
-  ctx.fillText('Cost: 500 Coins', birdX - 20, birdY + 130);
-
-  ctx.fillStyle = 'blue';
-  ctx.fillRect(canvas.width / 2 - 100, canvas.height / 2 - 25, 200, 50);
-  ctx.fillStyle = 'white';
-  ctx.fillText('Back', canvas.width / 2 - 40, canvas.height / 2 + 10);
-}
-
-// Upgrade purchase logic
-canvas.addEventListener('click', (e) => {
-  const x = e.clientX;
-  const y = e.clientY;
-
-  // Handle Upgrade Menu
-  if (inUpgradeMenu) {
-    const birdX = canvas.width / 2 - 50;
-    const birdY = canvas.height / 3;
-
-    // Back button
-    if (
-      x >= canvas.width / 2 - 100 &&
-      x <= canvas.width / 2 + 100 &&
-      y >= canvas.height / 2 - 25 &&
-      y <= canvas.height / 2 + 25
-    ) {
-      inUpgradeMenu = false;
-      drawMenu();
-    }
-
-    // Upgrade button (click on bird)
-    if (
-      x >= birdX - 20 &&
-      x <= birdX + 120 &&
-      y >= birdY &&
-      y <= birdY + 120 &&
-      coinBank >= 500 && !upgraded
-    ) {
-      coinBank -= 500;
-      upgraded = true;
-      drawMenu();
-    }
-  } else {
-    // Main menu logic (start game or upgrade)
-    if (
-      x >= canvas.width / 2 - 100 &&
-      x <= canvas.width / 2 + 100 &&
-      y >= canvas.height / 3 - 25 &&
-      y <= canvas.height / 3 + 25
-    ) {
-      gameStarted = true;
-      drawGame();
-    }
-
-    if (
-      x >= canvas.width / 2 - 150 &&
-      x <= canvas.width / 2 + 150 &&
-      y >= canvas.height / 2 - 25 &&
-      y <= canvas.height / 2 + 25
-    ) {
-      inUpgradeMenu = true;
-      drawUpgradeMenu();
-    }
-  }
-});
-
-// Draw the Game (when it's started)
-function drawGame() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas before drawing
-
-  // Draw background
+// Game Loop
+function gameLoop() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawBackground();
-
-  // Draw airplane
   drawAirplane();
-
-  // Draw obstacles and coins
-  drawObstacles();
   drawCoins();
-
-  // Draw score and level
+  drawObstacles();
   drawScoreAndLevel();
 
-  if (gameOver) {
-    drawGameOver();
-  } else {
-    requestAnimationFrame(drawGame);
-  }
+  if (gameOver) drawGameOver();
+  requestAnimationFrame(gameLoop);
 }
 
-// Start the game when the page loads
-drawMenu();
+gameLoop();
